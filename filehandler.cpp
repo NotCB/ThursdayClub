@@ -45,6 +45,7 @@ return 1;}
 
 int main(int argc, char *argv[]){
 	//Variables
+	int errorcounter=0;
 	std::string filenames[argc];
 	std::string userinput;
 	
@@ -66,6 +67,15 @@ int main(int argc, char *argv[]){
 	for(int i=0;i<argc-1;i++){
 		std::cout<<"What would you like to do with "<<filenames[i]<<"?\n";
 		std::getline(std::cin,userinput);
-		filehandler(filenames[i],userinput);
+		errorcounter=errorcounter+filehandler(filenames[i],userinput);
+	}
+	
+	if(errorcounter>=1){
+		if(errorcounter==1){
+			std::cout<<"There was "<<errorcounter<<" error!\n";
+		}else{
+			std::cout<<"There was "<<errorcounter<<" errors!\n";
+		}
+		return 1;
 	}
 return 0;}
