@@ -6,7 +6,9 @@
 //Global Variables
 int errorcount=0;
 std::ofstream errorlog("error.log");
-std::fstream alltime("alltime.log",std::ios::out|std::ios::app);
+
+bool atflag=false; //AllTime Flag
+std::string atfn="alltime.log";
 
 //Functions
 int createfile(std::string fn){
@@ -16,7 +18,13 @@ int createfile(std::string fn){
 		std::cout<<"Error!\n";
 		errorlog<<"Error!\n";errorcount++;
 		return 1;
-	}else{alltime<<"Cleared/Created "<<fn<<".\n";}
+	}else{
+		if(atflag){
+			std::fstream alltime(atfn,std::ios::out|std::ios::app);
+			alltime<<"Cleared/Created "<<fn<<".\n";
+			alltime.close();
+		}
+	}
 fs.close();return 0;}
 
 int readfile(std::string fn){
@@ -32,7 +40,11 @@ int readfile(std::string fn){
 		while(getline(fs,line)){
 			std::cout<<line<<'\n';
 		}
-		alltime<<"Read "<<fn<<".\n";
+		if(atflag){
+			std::fstream alltime(atfn,std::ios::out|std::ios::app);
+			alltime<<"Read "<<fn<<".\n";
+			alltime.close();
+		}
 	}
 fs.close();return 0;}
 
@@ -46,7 +58,11 @@ int writefile(std::string fn){
 	}
 	std::string line="init";
 	while(line!=""){getline(std::cin,line);fs<<line<<'\n';}
-	alltime<<"Write to "<<fn<<".\n";
+	if(atflag){
+		std::fstream alltime(atfn,std::ios::out|std::ios::app);
+		alltime<<"Write to "<<fn<<".\n";
+		alltime.close();
+	}
 fs.close();return 0;}
 
 int filehandler(std::string fn,std::string ui){
@@ -98,6 +114,5 @@ int main(int argc,char *argv[]){
 	
 	//Cleanup
 	errorlog.close();
-	alltime.close();
 	return 0;
 }
