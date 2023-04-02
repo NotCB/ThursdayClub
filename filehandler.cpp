@@ -7,6 +7,9 @@ int errorcount=0;
 std::string errorlogfilename="error.log";
 std::ofstream errorlog(errorlogfilename);
 
+std::string alltimefilename="alltime.log";
+std::fstream alltime(alltimefilename,std::ios::out|std::ios::app);
+
 int createfile(std::string fn){
 	std::fstream fs;
 	fs.open(fn,std::ios::out|std::ios::trunc);
@@ -14,7 +17,7 @@ int createfile(std::string fn){
 		std::cout<<"Error!\n";
 		errorlog<<"Error!\n";errorcount++;
 		return 1;
-	}
+	}else{alltime<<"Cleared/Created "<<fn<<".\n";}
 fs.close();return 0;}
 
 int readfile(std::string fn){
@@ -30,6 +33,7 @@ int readfile(std::string fn){
 		while(getline(fs,line)){
 			std::cout<<line<<'\n';
 		}
+		alltime<<"Read "<<fn<<".\n";
 	}
 fs.close();return 0;}
 
@@ -43,6 +47,7 @@ int writefile(std::string fn){
 	}
 	std::string line="init";
 	while(line!=""){getline(std::cin,line);fs<<line<<'\n';}
+	alltime<<"Write to "<<fn<<".\n";
 fs.close();return 0;}
 
 int filehandler(std::string fn,std::string ui){
