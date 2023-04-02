@@ -56,7 +56,7 @@ int filehandler(std::string fn,std::string ui){
 	else if(ui=="r"||ui=="read"){return readfile(fn);}
 return 1;}
 
-int main(int argc, char *argv[]){
+int main(int argc,char *argv[]){
 	//Variables
 	int argb=argc-1;
 	std::string filenames[argc];
