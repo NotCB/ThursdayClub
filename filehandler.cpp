@@ -3,6 +3,7 @@
 #include <iostream>
 #include <string>
 
+int errorcount=0;
 std::string errorlogfilename="error.log";
 std::ofstream errorlog(errorlogfilename);
 
@@ -11,7 +12,7 @@ int createfile(std::string fn){
 	fs.open(fn,std::ios::out|std::ios::trunc);
 	if(!fs.is_open()){
 		std::cout<<"Error!\n";
-		errorlog<<"Error!\n";
+		errorlog<<"Error!\n";errorcount++;
 		return 1;
 	}
 fs.close();return 0;}
@@ -21,7 +22,7 @@ int readfile(std::string fn){
 	fs.open(fn,std::ios::in);
 	if(!fs.is_open()){
 		std::cout<<"Error! Unable to open "<<fn<<"!\n";
-		errorlog<<"Error! Unable to open "<<fn<<"!\n";
+		errorlog<<"Error! Unable to open "<<fn<<"!\n";errorcount++;
 		return 1;
 	}
 	else{
@@ -37,7 +38,7 @@ int writefile(std::string fn){
 	fs.open(fn,std::ios::out|std::ios::app);
 	if(!fs.is_open()){
 		std::cout<<"Error! Unable to write to "<<fn<<"!\n";
-		errorlog<<"Error! Unable to write to "<<fn<<"!\n";
+		errorlog<<"Error! Unable to write to "<<fn<<"!\n";errorcount++;
 		return 1;
 	}
 	std::string line="init";
@@ -50,8 +51,6 @@ int filehandler(std::string fn,std::string ui){
 	else if(ui=="c"||ui=="clear"||ui=="create"){return createfile(fn);}
 	else if(ui=="r"||ui=="read"){return readfile(fn);}
 return 1;}
-
-int errorcount=0;
 
 int main(int argc, char *argv[]){
 	//Variables
@@ -76,7 +75,7 @@ int main(int argc, char *argv[]){
 	for(int i=0;i<argc-1;i++){
 		std::cout<<"What would you like to do with "<<filenames[i]<<"?\n";
 		std::getline(std::cin,userinput);
-		errorcount=errorcount+filehandler(filenames[i],userinput);
+		filehandler(filenames[i],userinput);
 	}
 	
 	if(errorcount>=1){
