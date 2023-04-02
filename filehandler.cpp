@@ -3,18 +3,29 @@
 #include <iostream>
 #include <string>
 
+std::string errorlogfilename="error.log";
+std::ofstream errorlog(errorlogfilename);
+
 int createfile(std::string fn){
 	std::fstream fs;
 	fs.open(fn,std::ios::out|std::ios::trunc);
-	if(!fs.is_open()){std::cout<<"Error!\n";return 1;}
+	if(!fs.is_open()){
+		std::cout<<"Error!\n";
+		errorlog<<"Error!\n";
+		return 1;
+	}
 fs.close();return 0;}
 
 int readfile(std::string fn){
-	std::string line;
 	std::fstream fs;
 	fs.open(fn,std::ios::in);
-	if(!fs.is_open()){std::cout<<"Error! Unable to open "<<fn<<"!\n";return 1;}
+	if(!fs.is_open()){
+		std::cout<<"Error! Unable to open "<<fn<<"!\n";
+		errorlog<<"Error! Unable to open "<<fn<<"!\n";
+		return 1;
+	}
 	else{
+		std::string line;
 		while(getline(fs,line)){
 			std::cout<<line<<'\n';
 		}
@@ -22,36 +33,34 @@ int readfile(std::string fn){
 fs.close();return 0;}
 
 int writefile(std::string fn){
-	std::string line="init";
 	std::fstream fs;
 	fs.open(fn,std::ios::out|std::ios::app);
-	if(!fs.is_open()){std::cout<<"Error! Unable to write to "<<fn<<"!\n";return 1;}
+	if(!fs.is_open()){
+		std::cout<<"Error! Unable to write to "<<fn<<"!\n";
+		errorlog<<"Error! Unable to write to "<<fn<<"!\n";
+		return 1;
+	}
+	std::string line="init";
 	while(line!=""){getline(std::cin,line);fs<<line<<'\n';}
 fs.close();return 0;}
 
 int filehandler(std::string fn,std::string ui){
 	std::transform(ui.begin(),ui.end(),ui.begin(),[](unsigned char c){return std::tolower(c);});//ui tolowercase
-	if (ui=="a"||ui=="w"||ui=="write"){
-		return writefile(fn);
-	}
-	else if(ui=="c"||ui=="clear"||ui=="create"){
-		return createfile(fn);
-	}
-	else if(ui=="r"||ui=="read"){
-		return readfile(fn);
-	}
-	else{return 1;}
+	if (ui=="a"||ui=="w"||ui=="write"){return writefile(fn);}
+	else if(ui=="c"||ui=="clear"||ui=="create"){return createfile(fn);}
+	else if(ui=="r"||ui=="read"){return readfile(fn);}
 return 1;}
+
+int errorcount=0;
 
 int main(int argc, char *argv[]){
 	//Variables
-	int errorcounter=0;
 	std::string filenames[argc];
 	std::string userinput;
 	
 	//Filenames
 	if(argc>=2){
-		for(int i=0;i<argc-1;i++){filenames[i]=argv[i+1];}//filename=argv[1];
+		for(int i=0;i<argc-1;i++){filenames[i]=argv[i+1];}
 	}else{
 		while(filenames[0]==""){
 			std::cout<<"Filename: ";
@@ -67,15 +76,17 @@ int main(int argc, char *argv[]){
 	for(int i=0;i<argc-1;i++){
 		std::cout<<"What would you like to do with "<<filenames[i]<<"?\n";
 		std::getline(std::cin,userinput);
-		errorcounter=errorcounter+filehandler(filenames[i],userinput);
+		errorcount=errorcount+filehandler(filenames[i],userinput);
 	}
 	
-	if(errorcounter>=1){
-		if(errorcounter==1){
-			std::cout<<"There was "<<errorcounter<<" error!\n";
+	if(errorcount>=1){
+		if(errorcount==1){
+			std::cout<<"There was "<<errorcount<<" error!\n";
+			errorlog<<"There was "<<errorcount<<" error!\n";
 		}else{
-			std::cout<<"There was "<<errorcounter<<" errors!\n";
+			std::cout<<"There was "<<errorcount<<" errors!\n";
+			errorlog<<"There was "<<errorcount<<" errors!\n";
 		}
 		return 1;
 	}
-return 0;}
+errorlog.close();return 0;}
