@@ -3,13 +3,12 @@
 #include <iostream>
 #include <string>
 
+//Global Variables
 int errorcount=0;
-std::string errorlogfilename="error.log";
-std::ofstream errorlog(errorlogfilename);
+std::ofstream errorlog("error.log");
+std::fstream alltime("alltime.log",std::ios::out|std::ios::app);
 
-std::string alltimefilename="alltime.log";
-std::fstream alltime(alltimefilename,std::ios::out|std::ios::app);
-
+//Functions
 int createfile(std::string fn){
 	std::fstream fs;
 	fs.open(fn,std::ios::out|std::ios::trunc);
@@ -59,30 +58,33 @@ return 1;}
 
 int main(int argc, char *argv[]){
 	//Variables
+	int argb=argc-1;
 	std::string filenames[argc];
 	std::string userinput;
 	
-	//Filenames
+	//Filename(s)
 	if(argc>=2){
-		for(int i=0;i<argc-1;i++){filenames[i]=argv[i+1];}
+		for(int i=0;i<argb;i++){filenames[i]=argv[i+1];}
 	}else{
 		while(filenames[0]==""){
 			std::cout<<"Filename: ";
 			std::getline(std::cin,filenames[0]);
 			if(filenames[0]==""){std::cout<<"No file name, try again.\n";}
-		}argc=argc+1;
+		}argb++;
 	}
 	
 	std::cout<<"Clear/create file(C)\n";
 	std::cout<<"Read file(R)\n";
 	std::cout<<"Write line(W)\n";
 	
-	for(int i=0;i<argc-1;i++){
+	//Handle Files
+	for(int i=0;i<argb;i++){
 		std::cout<<"What would you like to do with "<<filenames[i]<<"?\n";
 		std::getline(std::cin,userinput);
 		filehandler(filenames[i],userinput);
 	}
 	
+	//Error Counting
 	if(errorcount>=1){
 		if(errorcount==1){
 			std::cout<<"There was "<<errorcount<<" error!\n";
@@ -93,4 +95,9 @@ int main(int argc, char *argv[]){
 		}
 		return 1;
 	}
-errorlog.close();return 0;}
+	
+	//Cleanup
+	errorlog.close();
+	alltime.close();
+	return 0;
+}
