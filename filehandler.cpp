@@ -5,7 +5,8 @@
 
 //Global Variables
 int errorcount=0;
-std::ofstream errorlog("error.log");
+std::string elfn="error.log";
+std::fstream errorlog(elfn,std::ios::out|std::ios::trunc);
 
 bool atflag=false; //AllTime Flag
 std::string atfn="alltime.log";
@@ -16,7 +17,10 @@ int createfile(std::string fn){
 	fs.open(fn,std::ios::out|std::ios::trunc);
 	if(!fs.is_open()){
 		std::cout<<"Error!\n";
-		errorlog<<"Error!\n";errorcount++;
+		std::fstream errorlog(elfn,std::ios::out|std::ios::app);
+		errorlog<<"Error!\n";
+		errorlog.close();
+		errorcount++;
 		return 1;
 	}else{
 		if(atflag){
@@ -32,7 +36,10 @@ int readfile(std::string fn){
 	fs.open(fn,std::ios::in);
 	if(!fs.is_open()){
 		std::cout<<"Error! Unable to open "<<fn<<"!\n";
-		errorlog<<"Error! Unable to open "<<fn<<"!\n";errorcount++;
+		std::fstream errorlog(elfn,std::ios::out|std::ios::app);
+		errorlog<<"Error! Unable to open "<<fn<<"!\n";
+		errorlog.close();
+		errorcount++;
 		return 1;
 	}
 	else{
@@ -53,7 +60,10 @@ int writefile(std::string fn){
 	fs.open(fn,std::ios::out|std::ios::app);
 	if(!fs.is_open()){
 		std::cout<<"Error! Unable to write to "<<fn<<"!\n";
-		errorlog<<"Error! Unable to write to "<<fn<<"!\n";errorcount++;
+		std::fstream errorlog(elfn,std::ios::out|std::ios::app);
+		errorlog<<"Error! Unable to write to "<<fn<<"!\n";
+		errorlog.close();
+		errorcount++;
 		return 1;
 	}
 	std::string line="init";
@@ -102,17 +112,19 @@ int main(int argc,char *argv[]){
 	
 	//Error Counting
 	if(errorcount>=1){
+		std::fstream errorlog(elfn,std::ios::out|std::ios::app);
 		if(errorcount==1){
 			std::cout<<"There was "<<errorcount<<" error!\n";
 			errorlog<<"There was "<<errorcount<<" error!\n";
+
 		}else{
 			std::cout<<"There was "<<errorcount<<" errors!\n";
 			errorlog<<"There was "<<errorcount<<" errors!\n";
 		}
+		errorlog.close();
 		return 1;
 	}
 	
 	//Cleanup
-	errorlog.close();
 	return 0;
 }
