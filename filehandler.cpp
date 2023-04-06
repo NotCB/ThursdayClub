@@ -8,11 +8,19 @@ int errorcount=0;
 std::string elfn="error.log";
 std::fstream errorlog(elfn,std::ios::out|std::ios::trunc);
 
+//Alltime.log
 bool atflag=false; //AllTime Flag
-std::string atfn="alltime.log";
+
+void atfunc(std::string fn,char atc){
+	std::fstream alltime("alltime.log",std::ios::out|std::ios::app);
+	if(atc=='c'){alltime<<""<<fn<<"\n";}
+	if(atc=='r'){alltime<<""<<fn<<"\n";}
+	if(atc=='w'){alltime<<""<<fn<<"\n";}
+	alltime.close();
+}
 
 //Functions
-void errorout(char errortype,std::string fn){
+void errorout(std::string fn,char errortype){
 	std::string errorstring="";
 	if(errortype=='c'){errorstring="";}
 	if(errortype=='r'){errorstring="Unable to open ";}
@@ -29,14 +37,10 @@ int filecreate(std::string fn){
 	std::fstream fs;
 	fs.open(fn,std::ios::out|std::ios::trunc);
 	if(!fs.is_open()){
-		errorout('c',fn);
+		errorout(fn,'c');
 		return 1;
 	}else{
-		if(atflag){
-			std::fstream alltime(atfn,std::ios::out|std::ios::app);
-			alltime<<"Cleared/Created "<<fn<<".\n";
-			alltime.close();
-		}
+		if(atflag){atfunc(fn,'c');}
 	}
 fs.close();return 0;}
 
@@ -44,7 +48,7 @@ int fileread(std::string fn){
 	std::fstream fs;
 	fs.open(fn,std::ios::in);
 	if(!fs.is_open()){
-		errorout('r',fn);
+		errorout(fn,'r');
 		return 1;
 	}
 	else{
@@ -52,11 +56,7 @@ int fileread(std::string fn){
 		while(getline(fs,line)){
 			std::cout<<line<<'\n';
 		}
-		if(atflag){
-			std::fstream alltime(atfn,std::ios::out|std::ios::app);
-			alltime<<"Read "<<fn<<".\n";
-			alltime.close();
-		}
+		if(atflag){atfunc(fn,'r');}
 	}
 fs.close();return 0;}
 
@@ -64,19 +64,16 @@ int filewrite(std::string fn){
 	std::fstream fs;
 	fs.open(fn,std::ios::out|std::ios::app);
 	if(!fs.is_open()){
-		errorout('w',fn);
+		errorout(fn,'w');
 		return 1;
 	}
 	std::string line="init";
 	while(line!=""){getline(std::cin,line);fs<<line<<'\n';}
-	if(atflag){
-		std::fstream alltime(atfn,std::ios::out|std::ios::app);
-		alltime<<"Write to "<<fn<<".\n";
-		alltime.close();
-	}
+	if(atflag){atfunc(fn,'w');}
 fs.close();return 0;}
 
-int filehandler(std::string fn,std::string ui){
+int filehandle(std::string fn){
+	std::string ui;std::getline(std::cin,ui);
 	std::transform(ui.begin(),ui.end(),ui.begin(),[](unsigned char c){return std::tolower(c);});//ui tolowercase
 	if (ui=="a"||ui=="w"||ui=="write"){return filewrite(fn);}
 	else if(ui=="c"||ui=="clear"||ui=="create"){return filecreate(fn);}
@@ -107,8 +104,7 @@ int main(int argc,char *argv[]){
 	//Handle Files
 	for(int i=0;i<argb;i++){
 		std::cout<<"What would you like to do with "<<filenames[i]<<"?\n";
-		std::getline(std::cin,userinput);
-		filehandler(filenames[i],userinput);
+		filehandle(filenames[i]);
 	}
 	
 	//Error Counting
