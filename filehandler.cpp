@@ -9,13 +9,12 @@ std::string elfn="error.log";
 std::fstream errorlog(elfn,std::ios::out|std::ios::trunc);
 
 //Alltime.log
-bool atflag=false; //AllTime Flag
-
+bool atflag=false; //Alltime Flag
 void atfunc(std::string fn,char atc){
 	std::fstream alltime("alltime.log",std::ios::out|std::ios::app);
-	if(atc=='c'){alltime<<""<<fn<<"\n";}
-	if(atc=='r'){alltime<<""<<fn<<"\n";}
-	if(atc=='w'){alltime<<""<<fn<<"\n";}
+	if(atc=='c'){alltime<<"Cleared/Created "<<fn<<".\n";}
+	if(atc=='r'){alltime<<"Read "<<fn<<".\n";}
+	if(atc=='w'){alltime<<"Write to "<<fn<<".\n";}
 	alltime.close();
 }
 
