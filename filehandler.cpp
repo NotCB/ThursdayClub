@@ -12,15 +12,24 @@ bool atflag=false; //AllTime Flag
 std::string atfn="alltime.log";
 
 //Functions
-int createfile(std::string fn){
+void errorout(char errortype,std::string fn){
+	std::string errorstring="";
+	if(errortype=='c'){errorstring="";}
+	if(errortype=='r'){errorstring="Unable to open ";}
+	if(errortype=='w'){errorstring="Unable to write to ";}
+	errorstring="Error! "+errorstring+fn+"!\n";
+	std::cout<<errorstring;
+	std::fstream errorlog(elfn,std::ios::out|std::ios::app);
+	errorlog<<errorstring;
+	errorlog.close();
+	errorcount++;
+}
+
+int filecreate(std::string fn){
 	std::fstream fs;
 	fs.open(fn,std::ios::out|std::ios::trunc);
 	if(!fs.is_open()){
-		std::cout<<"Error!\n";
-		std::fstream errorlog(elfn,std::ios::out|std::ios::app);
-		errorlog<<"Error!\n";
-		errorlog.close();
-		errorcount++;
+		errorout('c',fn);
 		return 1;
 	}else{
 		if(atflag){
@@ -31,15 +40,11 @@ int createfile(std::string fn){
 	}
 fs.close();return 0;}
 
-int readfile(std::string fn){
+int fileread(std::string fn){
 	std::fstream fs;
 	fs.open(fn,std::ios::in);
 	if(!fs.is_open()){
-		std::cout<<"Error! Unable to open "<<fn<<"!\n";
-		std::fstream errorlog(elfn,std::ios::out|std::ios::app);
-		errorlog<<"Error! Unable to open "<<fn<<"!\n";
-		errorlog.close();
-		errorcount++;
+		errorout('r',fn);
 		return 1;
 	}
 	else{
@@ -55,15 +60,11 @@ int readfile(std::string fn){
 	}
 fs.close();return 0;}
 
-int writefile(std::string fn){
+int filewrite(std::string fn){
 	std::fstream fs;
 	fs.open(fn,std::ios::out|std::ios::app);
 	if(!fs.is_open()){
-		std::cout<<"Error! Unable to write to "<<fn<<"!\n";
-		std::fstream errorlog(elfn,std::ios::out|std::ios::app);
-		errorlog<<"Error! Unable to write to "<<fn<<"!\n";
-		errorlog.close();
-		errorcount++;
+		errorout('w',fn);
 		return 1;
 	}
 	std::string line="init";
@@ -77,9 +78,9 @@ fs.close();return 0;}
 
 int filehandler(std::string fn,std::string ui){
 	std::transform(ui.begin(),ui.end(),ui.begin(),[](unsigned char c){return std::tolower(c);});//ui tolowercase
-	if (ui=="a"||ui=="w"||ui=="write"){return writefile(fn);}
-	else if(ui=="c"||ui=="clear"||ui=="create"){return createfile(fn);}
-	else if(ui=="r"||ui=="read"){return readfile(fn);}
+	if (ui=="a"||ui=="w"||ui=="write"){return filewrite(fn);}
+	else if(ui=="c"||ui=="clear"||ui=="create"){return filecreate(fn);}
+	else if(ui=="r"||ui=="read"){return fileread(fn);}
 return 1;}
 
 int main(int argc,char *argv[]){
