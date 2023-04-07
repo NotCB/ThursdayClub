@@ -74,16 +74,15 @@ fs.close();return 0;}
 int filehandle(std::string fn){
 	std::string ui;std::getline(std::cin,ui);
 	std::transform(ui.begin(),ui.end(),ui.begin(),[](unsigned char c){return std::tolower(c);});//ui tolowercase
-	if (ui=="a"||ui=="w"||ui=="write"){return filewrite(fn);}
-	else if(ui=="c"||ui=="clear"||ui=="create"){return filecreate(fn);}
+	if(ui=="c"||ui=="clear"||ui=="create"){return filecreate(fn);}
 	else if(ui=="r"||ui=="read"){return fileread(fn);}
+	else if(ui=="a"||ui=="w"||ui=="write"){return filewrite(fn);}
 return 1;}
 
 int main(int argc,char *argv[]){
 	//Variables
 	int argb=argc-1;
 	std::string filenames[argc];
-	std::string userinput;
 	
 	//Filename(s)
 	if(argc>=2){
@@ -112,7 +111,6 @@ int main(int argc,char *argv[]){
 		if(errorcount==1){
 			std::cout<<"There was "<<errorcount<<" error!\n";
 			errorlog<<"There was "<<errorcount<<" error!\n";
-
 		}else{
 			std::cout<<"There was "<<errorcount<<" errors!\n";
 			errorlog<<"There was "<<errorcount<<" errors!\n";
