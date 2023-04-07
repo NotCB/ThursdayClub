@@ -6,7 +6,7 @@
 //Global Variables
 int errorcount=0;
 std::string elfn="error.log";
-std::fstream errorlog(elfn,std::ios::out|std::ios::trunc);
+//std::fstream errorlog(elfn,std::ios::out|std::ios::trunc);
 
 //Alltime.log
 bool atflag=false; //Alltime Flag
@@ -26,6 +26,7 @@ void errorout(std::string fn,char errortype){
 	if(errortype=='w'){errorstring="Unable to write to ";}
 	errorstring="Error! "+errorstring+fn+"!\n";
 	std::cout<<errorstring;
+	if(errorcount==0){std::fstream errorlog(elfn,std::ios::out|std::ios::trunc);errorlog.close();}
 	std::fstream errorlog(elfn,std::ios::out|std::ios::app);
 	errorlog<<errorstring;
 	errorlog.close();
