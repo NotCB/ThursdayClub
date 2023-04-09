@@ -6,6 +6,8 @@
 //Always include glew.h before gl.h and glfw3.h
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
+GLFWwindow* window;
+int windowWidth,windowHeight;
 //#include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 //using namespace glm;
@@ -17,6 +19,20 @@ GLuint loadBMP_custom(const char * imagepath);
 //#define FOURCC_DXT3 0x33545844 //"DXT3"
 //#define FOURCC_DXT5 0x35545844 //"DXT5"
 //GLuint loadDDS(const char * imagepath);
+
+void computeMatricesFromInputs();
+
+glm::mat4 ViewMatrix;
+glm::mat4 getViewMatrix(){return ViewMatrix;}
+glm::mat4 ProjectionMatrix;
+glm::mat4 getProjectionMatrix(){return ProjectionMatrix;}
+
+glm::vec3 position=glm::vec3(0,0,-4);
+float horizontalAngle=0.0f;
+float verticalAngle=0.0f;
+float initialFoV=80.0f;//60-100
+float speed=4.0f;
+float mouseSensitivity=0.003f;
 
 int main(){
 	if(!glfwInit()){
@@ -30,11 +46,9 @@ int main(){
 	glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT,GL_TRUE);//Make MacOS Happy
 	glfwWindowHint(GLFW_OPENGL_PROFILE,GLFW_OPENGL_CORE_PROFILE);
 	
-	GLFWwindow* window;
 	window=glfwCreateWindow(640,480,"Tutorial",NULL,NULL);
 	if(window==NULL){
 		fprintf(stderr,"Failed to open GLFW window.");
-		getchar();
 		glfwTerminate();
 		return -1;
 	}
@@ -47,34 +61,28 @@ int main(){
 		return -1;
 	}
 	
+	glfwGetWindowSize(window,&windowWidth,&windowHeight);
 	glfwSetInputMode(window,GLFW_STICKY_KEYS,GL_TRUE);
+	glfwSetInputMode(window,GLFW_CURSOR,GLFW_CURSOR_DISABLED);
+	glfwPollEvents();
+	glfwSetCursorPos(window,windowWidth /2,windowHeight /2);
 	
 	glClearColor(0.0f,0.0f,0.0f,0.0f);
 	
 	glEnable(GL_DEPTH_TEST);
 	glDepthFunc(GL_LESS);
+	glEnable(GL_CULL_FACE);
 	
 	GLuint VertexArrayID;
 	glGenVertexArrays(1,&VertexArrayID);
 	glBindVertexArray(VertexArrayID);
 	
 	GLuint programID=LoadShaders("vertexshader.glsl","fragmentshader.glsl");
-	
 	GLuint MatrixID=glGetUniformLocation(programID,"MVP");
-	
-	glm::mat4 Projection=glm::perspective(glm::radians(45.0f),4.0f/3.0f,0.1f,100.0f);
-	glm::mat4 View=glm::lookAt(
-		glm::vec3(4,3,3),
-		glm::vec3(0,0,0),
-		glm::vec3(0,1,0)
-	);
-	glm::mat4 Model=glm::mat4(1.0f);
-	glm::mat4 MVP=Projection *View *Model;
-	
 	GLuint Texture=loadBMP_custom("uvtemplate.bmp");
 	GLuint textureID=glGetUniformLocation(programID,"myTextureSampler");
 	
-static const GLfloat g_vertex_buffer_data[] = { 
+	static const GLfloat g_vertex_buffer_data[] = { 
 		-1.0f,-1.0f,-1.0f,-1.0f,-1.0f, 1.0f,-1.0f, 1.0f, 1.0f,
 		 1.0f, 1.0f,-1.0f,-1.0f,-1.0f,-1.0f,-1.0f, 1.0f,-1.0f,
 		 1.0f,-1.0f, 1.0f,-1.0f,-1.0f,-1.0f, 1.0f,-1.0f,-1.0f,
@@ -143,7 +151,17 @@ static const GLfloat g_vertex_buffer_data[] = {
 		
 		glUseProgram(programID);
 		
+		computeMatricesFromInputs();
+		glm::mat4 ProjectionMatrix=getProjectionMatrix();
+		glm::mat4 ViewMatrix=getViewMatrix();
+		glm::mat4 ModelMatrix=glm::mat4(1.0);
+		glm::mat4 MVP=ProjectionMatrix *ViewMatrix *ModelMatrix;
+		
 		glUniformMatrix4fv(MatrixID,1,GL_FALSE,&MVP[0][0]);
+		
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D,Texture);
+		glUniform1i(textureID,0);
 		
 		//Array 0: Vertices
 		glEnableVertexAttribArray(0);
@@ -206,7 +224,6 @@ GLuint LoadShaders(const char * vertex_file_path,const char * fragment_file_path
 		VertexShaderStream.close();
 	}else{
 		printf("Impossible to open %s.",vertex_file_path);
-		getchar();
 		return 0;
 	}
 	
@@ -285,7 +302,6 @@ GLuint loadBMP_custom(const char * imagepath){
 	FILE * file=fopen(imagepath,"rb");
 	if(!file){
 		printf("%s could not be opened.",imagepath);
-		getchar();
 		return 0;
 	}
 	
@@ -327,7 +343,7 @@ GLuint loadBMP_custom(const char * imagepath){
 	FILE *fp;
 	
 	fp=fopen(imagepath,"rb");
-	if(fp==NULL){printf("%s could not be opened.",imagepath);getchar();return 0;}
+	if(fp==NULL){printf("%s could not be opened.",imagepath);return 0;}
 	
 	char filecode[4];
 	fread(filecode,1,4,fp);
@@ -377,8 +393,8 @@ GLuint loadBMP_custom(const char * imagepath){
 		unsigned int size = ((width+3)/4)*((height+3)/4)*blockSize;
 		glCompressedTexImage2D(GL_TEXTURE_2D,level,format,width,height,0,size,buffer+offset);
 		offset+=size;
-		width/=2;
-		height/=2;
+		width /=2;
+		height /=2;
 		if(width<1){width=1;}
 		if(height<1){height=1;}
 	}
@@ -387,3 +403,41 @@ GLuint loadBMP_custom(const char * imagepath){
 	return textureID;
 }
 */
+
+void computeMatricesFromInputs(){
+	static double lastTime=glfwGetTime();
+	double currentTime=glfwGetTime();
+	float deltaTime=float(currentTime -lastTime);
+	
+	double xpos,ypos;
+	glfwGetCursorPos(window,&xpos,&ypos);
+	glfwSetCursorPos(window,windowWidth /2,windowHeight /2);
+	horizontalAngle+=mouseSensitivity*float(windowWidth /2-xpos);
+	verticalAngle+=mouseSensitivity*float(windowHeight /2-ypos);
+	
+	glm::vec3 direction(
+		cos(verticalAngle)*sin(horizontalAngle),
+		sin(verticalAngle),
+		cos(verticalAngle)*cos(horizontalAngle)
+	);
+	
+	glm::vec3 right=glm::vec3(
+		sin(horizontalAngle-3.14f/2.0f),
+		0,
+		cos(horizontalAngle-3.14f/2.0f)
+	);
+	
+	glm::vec3 up=glm::cross(right,direction);
+	
+	if(glfwGetKey(window,GLFW_KEY_UP)==GLFW_PRESS){position+=direction *deltaTime *speed;}
+	if(glfwGetKey(window,GLFW_KEY_DOWN)==GLFW_PRESS){position-=direction *deltaTime *speed;}
+	if(glfwGetKey(window,GLFW_KEY_RIGHT)==GLFW_PRESS){position+=right *deltaTime *speed;}
+	if(glfwGetKey(window,GLFW_KEY_LEFT)==GLFW_PRESS){position-=right *deltaTime *speed;}
+	
+	float FoV=initialFoV;
+	
+	ProjectionMatrix=glm::perspective(glm::radians(FoV),4.0f/3.0f,0.1f,100.0f);
+	ViewMatrix=glm::lookAt(position,position+direction,up);
+	
+	lastTime=currentTime;
+}
