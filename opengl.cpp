@@ -27,9 +27,9 @@ glm::mat4 getViewMatrix(){return ViewMatrix;}
 glm::mat4 ProjectionMatrix;
 glm::mat4 getProjectionMatrix(){return ProjectionMatrix;}
 
-glm::vec3 position=glm::vec3(0,0,-4);
-float horizontalAngle=0.0f;
-float verticalAngle=0.0f;
+glm::vec3 position=glm::vec3(0,0,-3);
+float horizontalAngle=0.0f/180.0f*3.14f;
+float verticalAngle=0.0f/180.0f*3.14f;
 float initialFoV=80.0f;//60-100
 float speed=4.0f;
 float mouseSensitivity=0.003f;
@@ -159,10 +159,6 @@ int main(){
 		
 		glUniformMatrix4fv(MatrixID,1,GL_FALSE,&MVP[0][0]);
 		
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D,Texture);
-		glUniform1i(textureID,0);
-		
 		//Array 0: Vertices
 		glEnableVertexAttribArray(0);
 		glBindBuffer(GL_ARRAY_BUFFER,vertexbuffer);
@@ -236,6 +232,9 @@ GLuint LoadShaders(const char * vertex_file_path,const char * fragment_file_path
 		FragmentShaderCode=sstr.str();
 		FragmentShaderStream.close();
 	}
+	
+	//std::string VertexShaderCode="";
+	//std::string FragmentShaderCode="";
 	
 	GLint Result=GL_FALSE;
 	int InfoLogLength;
@@ -422,9 +421,9 @@ void computeMatricesFromInputs(){
 	);
 	
 	glm::vec3 right=glm::vec3(
-		sin(horizontalAngle-3.14f/2.0f),
+		sin(horizontalAngle-3.14f /2.0f),
 		0,
-		cos(horizontalAngle-3.14f/2.0f)
+		cos(horizontalAngle-3.14f /2.0f)
 	);
 	
 	glm::vec3 up=glm::cross(right,direction);
