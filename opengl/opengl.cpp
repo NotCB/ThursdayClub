@@ -22,6 +22,21 @@ GLuint loadBMP_custom(const char * imagepath);
 
 void computeMatricesFromInputs();
 
+bool loadOBJ(
+	const char *path,
+	std::vector<glm::vec3>&out_vertices,
+	std::vector<glm::vec2>&out_uvs,
+	std::vector<glm::vec3>&out_normals
+);
+
+/*bool loadAssImp(
+	const char *path,
+	std::vector<unsigned short>&indicies,
+	std::vector<glm::vec3>&vertices,
+	std::vector<glm::vec2>&uvs,
+	std::vector<glm::vec3>&normals
+);*/
+
 glm::mat4 ViewMatrix;
 glm::mat4 getViewMatrix(){return ViewMatrix;}
 glm::mat4 ProjectionMatrix;
@@ -82,69 +97,20 @@ int main(){
 	GLuint Texture=loadBMP_custom("uvtemplate.bmp");
 	GLuint textureID=glGetUniformLocation(programID,"myTextureSampler");
 	
-	static const GLfloat g_vertex_buffer_data[] = { 
-		-1.0f,-1.0f,-1.0f,-1.0f,-1.0f, 1.0f,-1.0f, 1.0f, 1.0f,
-		 1.0f, 1.0f,-1.0f,-1.0f,-1.0f,-1.0f,-1.0f, 1.0f,-1.0f,
-		 1.0f,-1.0f, 1.0f,-1.0f,-1.0f,-1.0f, 1.0f,-1.0f,-1.0f,
-		 1.0f, 1.0f,-1.0f, 1.0f,-1.0f,-1.0f,-1.0f,-1.0f,-1.0f,
-		-1.0f,-1.0f,-1.0f,-1.0f, 1.0f, 1.0f,-1.0f, 1.0f,-1.0f,
-		 1.0f,-1.0f, 1.0f,-1.0f,-1.0f, 1.0f,-1.0f,-1.0f,-1.0f,
-		-1.0f, 1.0f, 1.0f,-1.0f,-1.0f, 1.0f, 1.0f,-1.0f, 1.0f,
-		 1.0f, 1.0f, 1.0f, 1.0f,-1.0f,-1.0f, 1.0f, 1.0f,-1.0f,
-		 1.0f,-1.0f,-1.0f, 1.0f, 1.0f, 1.0f, 1.0f,-1.0f, 1.0f,
-		 1.0f, 1.0f, 1.0f, 1.0f, 1.0f,-1.0f,-1.0f, 1.0f,-1.0f,
-		 1.0f, 1.0f, 1.0f,-1.0f, 1.0f,-1.0f,-1.0f, 1.0f, 1.0f,
-		 1.0f, 1.0f, 1.0f,-1.0f, 1.0f, 1.0f, 1.0f,-1.0f, 1.0f
-	};
-	
-	static const GLfloat g_uv_buffer_data[] = { 
-		0.000059f, 1.0f-0.000004f, 
-		0.000103f, 1.0f-0.336048f, 
-		0.335973f, 1.0f-0.335903f, 
-		1.000023f, 1.0f-0.000013f, 
-		0.667979f, 1.0f-0.335851f, 
-		0.999958f, 1.0f-0.336064f, 
-		0.667979f, 1.0f-0.335851f, 
-		0.336024f, 1.0f-0.671877f, 
-		0.667969f, 1.0f-0.671889f, 
-		1.000023f, 1.0f-0.000013f, 
-		0.668104f, 1.0f-0.000013f, 
-		0.667979f, 1.0f-0.335851f, 
-		0.000059f, 1.0f-0.000004f, 
-		0.335973f, 1.0f-0.335903f, 
-		0.336098f, 1.0f-0.000071f, 
-		0.667979f, 1.0f-0.335851f, 
-		0.335973f, 1.0f-0.335903f, 
-		0.336024f, 1.0f-0.671877f, 
-		1.000004f, 1.0f-0.671847f, 
-		0.999958f, 1.0f-0.336064f, 
-		0.667979f, 1.0f-0.335851f, 
-		0.668104f, 1.0f-0.000013f, 
-		0.335973f, 1.0f-0.335903f, 
-		0.667979f, 1.0f-0.335851f, 
-		0.335973f, 1.0f-0.335903f, 
-		0.668104f, 1.0f-0.000013f, 
-		0.336098f, 1.0f-0.000071f, 
-		0.000103f, 1.0f-0.336048f, 
-		0.000004f, 1.0f-0.671870f, 
-		0.336024f, 1.0f-0.671877f, 
-		0.000103f, 1.0f-0.336048f, 
-		0.336024f, 1.0f-0.671877f, 
-		0.335973f, 1.0f-0.335903f, 
-		0.667969f, 1.0f-0.671889f, 
-		1.000004f, 1.0f-0.671847f, 
-		0.667979f, 1.0f-0.335851f
-	};
+	std::vector<glm::vec3> vertices;
+	std::vector<glm::vec2> uvs;
+	std::vector<glm::vec3> normals;
+	bool res=loadOBJ("cube.obj",vertices,uvs,normals);
 	
 	GLuint vertexbuffer;
 	glGenBuffers(1,&vertexbuffer);
 	glBindBuffer(GL_ARRAY_BUFFER,vertexbuffer);
-	glBufferData(GL_ARRAY_BUFFER,sizeof(g_vertex_buffer_data),g_vertex_buffer_data,GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER,vertices.size()*sizeof(glm::vec3),&vertices[0],GL_STATIC_DRAW);
 	
 	GLuint uvbuffer;
-	glGenBuffers(1, &uvbuffer);
-	glBindBuffer(GL_ARRAY_BUFFER, uvbuffer);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(g_uv_buffer_data), g_uv_buffer_data, GL_STATIC_DRAW);
+	glGenBuffers(1,&uvbuffer);
+	glBindBuffer(GL_ARRAY_BUFFER,uvbuffer);
+	glBufferData(GL_ARRAY_BUFFER,uvs.size()*sizeof(glm::vec2),&uvs[0],GL_STATIC_DRAW);
 	
 	do{
 		glClear(GL_COLOR_BUFFER_BIT |GL_DEPTH_BUFFER_BIT);
@@ -440,3 +406,124 @@ void computeMatricesFromInputs(){
 	
 	lastTime=currentTime;
 }
+
+bool loadOBJ(
+	const char *path,
+	std::vector<glm::vec3>&out_vertices,
+	std::vector<glm::vec2>&out_uvs,
+	std::vector<glm::vec3>&out_normals
+){
+	std::vector<unsigned int>vertexIndices,uvIndices,normalIndices;
+	std::vector<glm::vec3>temp_vertices;
+	std::vector<glm::vec2>temp_uvs;
+	std::vector<glm::vec3>temp_normals;
+	
+	FILE *file=fopen(path,"r");
+	if(file==NULL){
+		printf("Impossible to open the file!\n");
+		return false;
+	}
+	
+	while(1){
+		char lineHeader[128];
+		int res=fscanf(file,"%s",lineHeader);
+		if(res==EOF){break;}
+		
+		if(strcmp(lineHeader,"v")==0){
+			glm::vec3 vertex;
+			fscanf(file,"%f %f %f\n",&vertex.x,&vertex.y,&vertex.z);
+			temp_vertices.push_back(vertex);
+		}else if(strcmp(lineHeader,"vt")==0){
+			glm::vec2 uv;
+			fscanf(file,"%f %f\n",&uv.x,&uv.y);
+			//uv.y=-uv.y;//Invert V coordinate for DDS texture
+			temp_uvs.push_back(uv);
+		}else if(strcmp(lineHeader,"vn")==0){
+			glm::vec3 normal;
+			fscanf(file,"%f %f %f\n",&normal.x,&normal.y,&normal.z);
+			temp_normals.push_back(normal);
+		}else if(strcmp(lineHeader,"f")==0){
+			std::string vertex1,vertex2,vertex3;
+			unsigned int vI[3],uvI[3],nI[3];
+			int matches=fscanf(file,"%d/%d/%d %d/%d/%d %d/%d/%d\n",&vI[0],&uvI[0],&nI[0],&vI[1],&uvI[1],&nI[1],&vI[2],&uvI[2],&nI[2]);
+			if(matches!=9){
+				printf("File cannot be read by simple parser\n");
+				fclose(file);
+				return false;
+			}
+			vertexIndices.push_back(vI[0]);
+			vertexIndices.push_back(vI[1]);
+			vertexIndices.push_back(vI[2]);
+			uvIndices.push_back(uvI[0]);
+			uvIndices.push_back(uvI[1]);
+			uvIndices.push_back(uvI[2]);
+			normalIndices.push_back(nI[0]);
+			normalIndices.push_back(nI[1]);
+			normalIndices.push_back(nI[2]);
+		}else{
+			char stupidBuffer[1024];
+			fgets(stupidBuffer,1024,file);
+		}
+	}
+	
+	for(unsigned int i=0;i<vertexIndices.size();i++){
+		unsigned int vertexIndex=vertexIndices[i];
+		unsigned int uvIndex=uvIndices[i];
+		unsigned int normalIndex=normalIndices[i];
+		
+		glm::vec3 vertex=temp_vertices[vertexIndex-1];
+		glm::vec2 uv=temp_uvs[uvIndex-1];
+		glm::vec3 normal=temp_normals[normalIndex-1];
+		
+		out_vertices.push_back(vertex);
+		out_uvs.push_back(uv);
+		out_normals.push_back(normal);
+	}
+	
+	fclose(file);
+	return true;
+}
+
+/*bool loadAssImp(
+	const char *path,
+	std::vector<unsigned short>&indices,
+	std::vector<glm::vec3>&vertices,
+	std::vector<glm::vec2>&uvs,
+	std::vector<glm::vec3>&normals
+){
+	Assimp::Importer importer;
+	
+	const aiScene* scene=importer.ReadFile(path,0);
+	if(!scene){
+		fprintf(stderr,importer.GetErrorString());
+		return false;
+	}
+	const aiMesh* mesh=scene->mMeshes[0];
+	
+	vertices.reserve(mesh->mNumVertices);
+	for(unsigned int i=0;i<mesh->mNumVertices;i++){
+		aiVector3D pos=mesh->mVertices[i];
+		vertices.push_back(glm::vec3(pos.x,pos.y,pos.z));
+	}
+	
+	uvs.reserve(mesh->mNumVertices);
+	for(unsigned int i=0;i<mesh->mNumVertices;i++){
+		aiVector3D UVW=mesh->mTextureCoords[0][i];
+		uvs.push_back(glm::vec2(UVW.x,UVW.y));
+	}
+	
+	normals.reserve(mesh->mNumVertices);
+	for(unsigned int i=0;i<mesh->mNumVertices;i++){
+		aiVector3D n=mesh->mNormals[i];
+		normals.push_back(glm::vec3(n.x,n.y,n.z));
+	}
+	
+	indices.reserve(3*mesh->mNumFaces);
+	for(unsigned int i=0;i<mesh->mNumFaces;i++){
+		indices.push_back(mesh->mFaces[i].mIndices[0]);
+		indices.push_back(mesh->mFaces[i].mIndices[1]);
+		indices.push_back(mesh->mFaces[i].mIndices[2]);
+	}
+	
+	return true;
+}*/
