@@ -1,26 +1,25 @@
 #include <cstring>
 #include <fstream>
+#include <map>
 #include <sstream>
 #include <vector>
 
-//Always include glew.h before gl.h and glfw3.h
-#include <GL/glew.h>
-
+#include <GL/glew.h> //Always include glew.h before gl.h and glfw3.h
 #include <GLFW/glfw3.h>
-GLFWwindow* window;
-int windowWidth,windowHeight;
-
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
-//using namespace glm;
+
+GLFWwindow* window;
+int windowWidth,windowHeight;
 
 GLuint LoadShaders(const char * vertex_file_path,const char * fragment_file_path);
 
 GLuint loadBMP_custom(const char * imagepath);
-//#define FOURCC_DXT1 0x31545844 //"DXT1"
-//#define FOURCC_DXT3 0x33545844 //"DXT3"
-//#define FOURCC_DXT5 0x35545844 //"DXT5"
-//GLuint loadDDS(const char * imagepath);
+//"DXT1" "DXT3" "DXT5"
+#define FOURCC_DXT1 0x31545844
+#define FOURCC_DXT3 0x33545844
+#define FOURCC_DXT5 0x35545844
+GLuint loadDDS(const char * imagepath);
 
 void computeMatricesFromInputs();
 glm::mat4 ViewMatrix;
@@ -35,6 +34,25 @@ bool loadOBJ(
 	std::vector<glm::vec3>&out_normals
 );
 
+struct PackedVertex{
+	glm::vec3 position;
+	glm::vec2 uv;
+	glm::vec3 normal;
+	bool operator<(const PackedVertex that) const{
+		return memcmp((void*)this, (void*)&that, sizeof(PackedVertex))>0;
+	};
+};
+
+void indexVBO(
+	std::vector<glm::vec3>&in_vertices,
+	std::vector<glm::vec2>&in_uvs,
+	std::vector<glm::vec3>&in_normals,
+	std::vector<unsigned short>&out_indices,
+	std::vector<glm::vec3>&out_vertices,
+	std::vector<glm::vec2>&out_uvs,
+	std::vector<glm::vec3>&out_normals
+);
+
 glm::vec3 position=glm::vec3(0,0,2);
 float horizontalAngle=180.0f/180.0f*3.14f;
 float verticalAngle=0.0f/180.0f*3.14f;
@@ -44,19 +62,23 @@ float mouseSensitivity=0.003f;
 
 int main(){
 	if(!glfwInit()){
-		fprintf(stderr,"Failed to initialize GLFW\n");
+		std::fstream eout("error.log",std::ios::out | std::ios::app);
+		eout<<"Failed to initialize GLFW\n";
+		eout.close();
 		return -1;
 	}
 	
-	glfwWindowHint(GLFW_SAMPLES,4);//4x AntiAliasing
+	glfwWindowHint(GLFW_SAMPLES,0);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR,3);//OpenGL 3.3
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR,3);
-	glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT,GL_TRUE);//Make MacOS Happy
+	glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT,GL_TRUE);//MacOS Happy
 	glfwWindowHint(GLFW_OPENGL_PROFILE,GLFW_OPENGL_CORE_PROFILE);
 	
 	window=glfwCreateWindow(640,480,"Tutorial",NULL,NULL);
 	if(window==NULL){
-		fprintf(stderr,"Failed to open GLFW window.");
+		std::fstream eout("error.log",std::ios::out | std::ios::app);
+		eout<<"Failed to open GLFW window.";
+		eout.close();
 		glfwTerminate();
 		return -1;
 	}
@@ -64,7 +86,9 @@ int main(){
 	
 	glewExperimental=true;
 	if(glewInit()!=GLEW_OK){
-		fprintf(stderr,"Failed to initialize GLEW\n");
+		std::fstream eout("error.log",std::ios::out | std::ios::app);
+		eout<<"Failed to initialize GLEW\n";
+		eout.close();
 		glfwTerminate();
 		return -1;
 	}
@@ -98,25 +122,47 @@ int main(){
 	std::vector<glm::vec3> normals;
 	bool res=loadOBJ("suzanne.obj",vertices,uvs,normals);
 	
+	std::vector<unsigned short>indices;
+	std::vector<glm::vec3>indexed_vertices;
+	std::vector<glm::vec2>indexed_uvs;
+	std::vector<glm::vec3>indexed_normals;
+	indexVBO(vertices,uvs,normals,indices,indexed_vertices,indexed_uvs,indexed_normals);
+	
 	GLuint vertexbuffer;
 	glGenBuffers(1,&vertexbuffer);
 	glBindBuffer(GL_ARRAY_BUFFER,vertexbuffer);
-	glBufferData(GL_ARRAY_BUFFER,vertices.size()*sizeof(glm::vec3),&vertices[0],GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER,indexed_vertices.size()*sizeof(glm::vec3),&indexed_vertices[0],GL_STATIC_DRAW);
 	
 	GLuint uvbuffer;
 	glGenBuffers(1,&uvbuffer);
 	glBindBuffer(GL_ARRAY_BUFFER,uvbuffer);
-	glBufferData(GL_ARRAY_BUFFER,uvs.size()*sizeof(glm::vec2),&uvs[0],GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER,indexed_uvs.size()*sizeof(glm::vec2),&indexed_uvs[0],GL_STATIC_DRAW);
 	
 	GLuint normalbuffer;
 	glGenBuffers(1,&normalbuffer);
 	glBindBuffer(GL_ARRAY_BUFFER,normalbuffer);
-	glBufferData(GL_ARRAY_BUFFER,normals.size()*sizeof(glm::vec3),&normals[0],GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER,indexed_normals.size()*sizeof(glm::vec3),&indexed_normals[0],GL_STATIC_DRAW);
+	
+	GLuint elementbuffer;
+	glGenBuffers(1,&elementbuffer);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,elementbuffer);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER,indices.size()*sizeof(unsigned short),&indices[0],GL_STATIC_DRAW);
 	
 	glUseProgram(programID);
 	GLuint LightID=glGetUniformLocation(programID,"LightPosition_worldspace");
 	
+	double lastTime=glfwGetTime();
+	int nbFrames=0;
+	
 	do{
+		double currentTime=glfwGetTime();
+		nbFrames++;
+		if(currentTime-lastTime>=1.0){
+			printf("%f ms/frame\n",1000.0/double(nbFrames));
+			nbFrames=0;
+			lastTime+=1.0;
+		}
+		
 		glClear(GL_COLOR_BUFFER_BIT |GL_DEPTH_BUFFER_BIT);
 		
 		glUseProgram(programID);
@@ -156,7 +202,9 @@ int main(){
 		glBindBuffer(GL_ARRAY_BUFFER,normalbuffer);
 		glVertexAttribPointer(2,3,GL_FLOAT,GL_FALSE,0,(void*)0);
 		
-		glDrawArrays(GL_TRIANGLES,0,vertices.size());
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,elementbuffer);
+		
+		glDrawElements(GL_TRIANGLES,indices.size(),GL_UNSIGNED_SHORT,(void*)0);
 		
 		//Disable Arrays
 		glDisableVertexAttribArray(0);
@@ -167,10 +215,10 @@ int main(){
 		glfwPollEvents();
 	}while(glfwGetKey(window,GLFW_KEY_ESCAPE)!=GLFW_PRESS&&glfwWindowShouldClose(window)==0);
 	
-	//Cleanup
 	glDeleteBuffers(1,&vertexbuffer);
 	glDeleteBuffers(1,&uvbuffer);
 	glDeleteBuffers(1,&normalbuffer);
+	glDeleteBuffers(1,&elementbuffer);
 	glDeleteProgram(programID);
 	glDeleteTextures(1,&Texture);
 	glDeleteVertexArrays(1,&VertexArrayID);
@@ -181,11 +229,9 @@ int main(){
 }
 
 GLuint LoadShaders(const char * vertex_file_path,const char * fragment_file_path){
-	//Create the shaders
 	GLuint VertexShaderID=glCreateShader(GL_VERTEX_SHADER);
 	GLuint FragmentShaderID=glCreateShader(GL_FRAGMENT_SHADER);
 	
-	//Read the Vertex Shader code from file
 	std::string VertexShaderCode;
 	std::ifstream VertexShaderStream(vertex_file_path,std::ios::in);
 	if(VertexShaderStream.is_open()){
@@ -194,11 +240,12 @@ GLuint LoadShaders(const char * vertex_file_path,const char * fragment_file_path
 		VertexShaderCode=sstr.str();
 		VertexShaderStream.close();
 	}else{
-		printf("Impossible to open %s.",vertex_file_path);
+		std::fstream eout("error.log",std::ios::out | std::ios::app);
+		eout<<"Impossible to open "<<vertex_file_path<<"\n";
+		eout.close();
 		return 0;
 	}
 	
-	//Read the Fragment Shader code from file
 	std::string FragmentShaderCode;
 	std::ifstream FragmentShaderStream(fragment_file_path,std::ios::in);
 	if(FragmentShaderStream.is_open()){
@@ -208,53 +255,50 @@ GLuint LoadShaders(const char * vertex_file_path,const char * fragment_file_path
 		FragmentShaderStream.close();
 	}
 	
-	//std::string VertexShaderCode="";
-	//std::string FragmentShaderCode="";
-	
 	GLint Result=GL_FALSE;
 	int InfoLogLength;
 	
-	//Compile Vertex Shader
 	char const * VertexSourcePointer=VertexShaderCode.c_str();
 	glShaderSource(VertexShaderID,1,&VertexSourcePointer,NULL);
 	glCompileShader(VertexShaderID);
 	
-	//Check Vertex Shader
 	glGetShaderiv(VertexShaderID,GL_COMPILE_STATUS,&Result);
 	glGetShaderiv(VertexShaderID,GL_INFO_LOG_LENGTH,&InfoLogLength);
 	if(InfoLogLength>0){
 		std::vector<char> VertexShaderErrorMessage(InfoLogLength+1);
 		glGetShaderInfoLog(VertexShaderID,InfoLogLength,NULL,&VertexShaderErrorMessage[0]);
-		printf("%s \n",&VertexShaderErrorMessage[0]);
+		std::fstream eout("error.log",std::ios::out | std::ios::app);
+		eout<<&VertexShaderErrorMessage[0]<<"\n";
+		eout.close();
 	}
 	
-	//Compile Fragment Shader
 	char const * FragmentSourcePointer=FragmentShaderCode.c_str();
 	glShaderSource(FragmentShaderID,1,&FragmentSourcePointer,NULL);
 	glCompileShader(FragmentShaderID);
 	
-	//Check Fragment Shader
 	glGetShaderiv(FragmentShaderID,GL_COMPILE_STATUS,&Result);
 	glGetShaderiv(FragmentShaderID,GL_INFO_LOG_LENGTH,&InfoLogLength);
 	if(InfoLogLength>0){
 		std::vector<char> FragmentShaderErrorMessage(InfoLogLength+1);
 		glGetShaderInfoLog(FragmentShaderID,InfoLogLength,NULL,&FragmentShaderErrorMessage[0]);
-		printf("%s \n",&FragmentShaderErrorMessage[0]);
+		std::fstream eout("error.log",std::ios::out | std::ios::app);
+		eout<<&FragmentShaderErrorMessage[0]<<"\n";
+		eout.close();
 	}
 	
-	//Link program
 	GLuint ProgramID=glCreateProgram();
 	glAttachShader(ProgramID,VertexShaderID);
 	glAttachShader(ProgramID,FragmentShaderID);
 	glLinkProgram(ProgramID);
 	
-	//Check program
 	glGetProgramiv(ProgramID,GL_LINK_STATUS,&Result);
 	glGetProgramiv(ProgramID,GL_INFO_LOG_LENGTH,&InfoLogLength);
 	if(InfoLogLength>0){
 		std::vector<char> ProgramErrorMessage(InfoLogLength+1);
 		glGetProgramInfoLog(ProgramID,InfoLogLength,NULL,&ProgramErrorMessage[0]);
-		printf("%s \n",&ProgramErrorMessage[0]);
+		std::fstream eout("error.log",std::ios::out | std::ios::app);
+		eout<<&ProgramErrorMessage[0]<<"\n";
+		eout.close();
 	}
 	
 	glDetachShader(ProgramID,VertexShaderID);
@@ -275,14 +319,17 @@ GLuint loadBMP_custom(const char * imagepath){
 	
 	FILE * file=fopen(imagepath,"rb");
 	if(!file){
-		printf("%s could not be opened.",imagepath);
+		std::fstream eout("error.log",std::ios::out | std::ios::app);
+		eout<<imagepath<<" could not be opened.";
+		eout.close();
 		return 0;
 	}
 	
-	if(fread(header,1,54,file)!=54){printf("Not a correct BMP file \n");fclose(file);return 0;}
-	if(header[0]!='B'||header[1]!='M'){printf("Not a correct BMP file \n");fclose(file);return 0;}
-	if(*(int *)&(header[0x1E])!=0){printf("Not a correct BMP file \n");fclose(file);return 0;}
-	if(*(int *)&(header[0x1C])!=24){printf("Not a correct BMP file \n");fclose(file);return 0;}
+	std::fstream eout("error.log",std::ios::out | std::ios::app);
+	if(fread(header,1,54,file)!=54){eout<<"Not a correct BMP file \n";fclose(file);return 0;}
+	if(header[0]!='B'||header[1]!='M'){eout<<"Not a correct BMP file \n";fclose(file);return 0;}
+	if(*(int *)&(header[0x1E])!=0){eout<<"Not a correct BMP file \n";fclose(file);return 0;}
+	if(*(int *)&(header[0x1C])!=24){eout<<"Not a correct BMP file \n";fclose(file);return 0;}
 	
 	dataPos=*(int *)&(header[0x0A]);
 	imageSize=*(int *)&(header[0x22]);
@@ -312,12 +359,17 @@ GLuint loadBMP_custom(const char * imagepath){
 	return textureID;
 }
 
-/*GLuint loadDDS(const char * imagepath){
+GLuint loadDDS(const char * imagepath){
 	unsigned char header[124];
 	FILE *fp;
 	
 	fp=fopen(imagepath,"rb");
-	if(fp==NULL){printf("%s could not be opened.",imagepath);return 0;}
+	if(fp==NULL){
+		std::fstream eout("error.log",std::ios::out | std::ios::app);
+		eout<<imagepath<<" could not be opened.";
+		eout.close();
+		return 0;
+	}
 	
 	char filecode[4];
 	fread(filecode,1,4,fp);
@@ -376,7 +428,6 @@ GLuint loadBMP_custom(const char * imagepath){
 	free(buffer);
 	return textureID;
 }
-*/
 
 void computeMatricesFromInputs(){
 	static double lastTime=glfwGetTime();
@@ -429,7 +480,9 @@ bool loadOBJ(
 	
 	FILE *file=fopen(path,"r");
 	if(file==NULL){
-		printf("Impossible to open the file!\n");
+		std::fstream eout("error.log",std::ios::out | std::ios::app);
+		eout<<"Impossible to open the file!\n";
+		eout.close();
 		return false;
 	}
 	
@@ -456,7 +509,9 @@ bool loadOBJ(
 			unsigned int vI[3],uvI[3],nI[3];
 			int matches=fscanf(file,"%d/%d/%d %d/%d/%d %d/%d/%d\n",&vI[0],&uvI[0],&nI[0],&vI[1],&uvI[1],&nI[1],&vI[2],&uvI[2],&nI[2]);
 			if(matches!=9){
-				printf("File cannot be read by simple parser\n");
+				std::fstream eout("error.log",std::ios::out | std::ios::app);
+				eout<<"File cannot be read by simple parser\n";
+				eout.close();
 				fclose(file);
 				return false;
 			}
@@ -491,4 +546,47 @@ bool loadOBJ(
 	
 	fclose(file);
 	return true;
+}
+
+bool getSimilarVertexIndex_fast( 
+	PackedVertex & packed, 
+	std::map<PackedVertex,unsigned short> & VertexToOutIndex,
+	unsigned short & result
+){
+	std::map<PackedVertex,unsigned short>::iterator it = VertexToOutIndex.find(packed);
+	if ( it == VertexToOutIndex.end() ){
+		return false;
+	}else{
+		result = it->second;
+		return true;
+	}
+}
+
+void indexVBO(
+	std::vector<glm::vec3>&in_vertices,
+	std::vector<glm::vec2>&in_uvs,
+	std::vector<glm::vec3>&in_normals,
+	std::vector<unsigned short>&out_indices,
+	std::vector<glm::vec3>&out_vertices,
+	std::vector<glm::vec2>&out_uvs,
+	std::vector<glm::vec3>&out_normals
+){
+	std::map<PackedVertex,unsigned short>VertexToOutIndex;
+	
+	for(unsigned int i=0;i<in_vertices.size();i++){
+		PackedVertex packed={in_vertices[i],in_uvs[i],in_normals[i]};
+		
+		unsigned short index;
+		bool found=getSimilarVertexIndex_fast(packed,VertexToOutIndex,index);
+		if(found){
+			out_indices.push_back(index);
+		}else{
+			out_vertices.push_back(in_vertices[i]);
+			out_uvs.push_back(in_uvs[i]);
+			out_normals.push_back(in_normals[i]);
+			unsigned short newindex=(unsigned short)out_vertices.size()-1;
+			out_indices.push_back(newindex);
+			VertexToOutIndex[packed]=newindex;
+		}
+	}
 }
