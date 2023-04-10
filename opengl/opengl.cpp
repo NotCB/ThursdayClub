@@ -5,22 +5,28 @@
 
 //Always include glew.h before gl.h and glfw3.h
 #include <GL/glew.h>
+
 #include <GLFW/glfw3.h>
 GLFWwindow* window;
 int windowWidth,windowHeight;
-//#include <glm/glm.hpp>
+
+#include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 //using namespace glm;
 
 GLuint LoadShaders(const char * vertex_file_path,const char * fragment_file_path);
-GLuint loadBMP_custom(const char * imagepath);
 
+GLuint loadBMP_custom(const char * imagepath);
 //#define FOURCC_DXT1 0x31545844 //"DXT1"
 //#define FOURCC_DXT3 0x33545844 //"DXT3"
 //#define FOURCC_DXT5 0x35545844 //"DXT5"
 //GLuint loadDDS(const char * imagepath);
 
 void computeMatricesFromInputs();
+glm::mat4 ViewMatrix;
+glm::mat4 getViewMatrix(){return ViewMatrix;}
+glm::mat4 ProjectionMatrix;
+glm::mat4 getProjectionMatrix(){return ProjectionMatrix;}
 
 bool loadOBJ(
 	const char *path,
@@ -29,21 +35,8 @@ bool loadOBJ(
 	std::vector<glm::vec3>&out_normals
 );
 
-/*bool loadAssImp(
-	const char *path,
-	std::vector<unsigned short>&indicies,
-	std::vector<glm::vec3>&vertices,
-	std::vector<glm::vec2>&uvs,
-	std::vector<glm::vec3>&normals
-);*/
-
-glm::mat4 ViewMatrix;
-glm::mat4 getViewMatrix(){return ViewMatrix;}
-glm::mat4 ProjectionMatrix;
-glm::mat4 getProjectionMatrix(){return ProjectionMatrix;}
-
-glm::vec3 position=glm::vec3(0,0,-3);
-float horizontalAngle=0.0f/180.0f*3.14f;
+glm::vec3 position=glm::vec3(0,0,2);
+float horizontalAngle=180.0f/180.0f*3.14f;
 float verticalAngle=0.0f/180.0f*3.14f;
 float initialFoV=80.0f;//60-100
 float speed=4.0f;
@@ -94,13 +87,16 @@ int main(){
 	
 	GLuint programID=LoadShaders("vertexshader.glsl","fragmentshader.glsl");
 	GLuint MatrixID=glGetUniformLocation(programID,"MVP");
+	GLuint ModelMatrixID=glGetUniformLocation(programID,"M");
+	GLuint ViewMatrixID=glGetUniformLocation(programID,"V");
+	
 	GLuint Texture=loadBMP_custom("uvtemplate.bmp");
 	GLuint textureID=glGetUniformLocation(programID,"myTextureSampler");
 	
 	std::vector<glm::vec3> vertices;
 	std::vector<glm::vec2> uvs;
 	std::vector<glm::vec3> normals;
-	bool res=loadOBJ("cube.obj",vertices,uvs,normals);
+	bool res=loadOBJ("suzanne.obj",vertices,uvs,normals);
 	
 	GLuint vertexbuffer;
 	glGenBuffers(1,&vertexbuffer);
@@ -111,6 +107,14 @@ int main(){
 	glGenBuffers(1,&uvbuffer);
 	glBindBuffer(GL_ARRAY_BUFFER,uvbuffer);
 	glBufferData(GL_ARRAY_BUFFER,uvs.size()*sizeof(glm::vec2),&uvs[0],GL_STATIC_DRAW);
+	
+	GLuint normalbuffer;
+	glGenBuffers(1,&normalbuffer);
+	glBindBuffer(GL_ARRAY_BUFFER,normalbuffer);
+	glBufferData(GL_ARRAY_BUFFER,normals.size()*sizeof(glm::vec3),&normals[0],GL_STATIC_DRAW);
+	
+	glUseProgram(programID);
+	GLuint LightID=glGetUniformLocation(programID,"LightPosition_worldspace");
 	
 	do{
 		glClear(GL_COLOR_BUFFER_BIT |GL_DEPTH_BUFFER_BIT);
@@ -124,12 +128,17 @@ int main(){
 		glm::mat4 MVP=ProjectionMatrix *ViewMatrix *ModelMatrix;
 		
 		glUniformMatrix4fv(MatrixID,1,GL_FALSE,&MVP[0][0]);
+		glUniformMatrix4fv(ModelMatrixID,1,GL_FALSE,&ModelMatrix[0][0]);
+		glUniformMatrix4fv(ViewMatrixID,1,GL_FALSE,&ViewMatrix[0][0]);
+		
+		glm::vec3 lightPos=glm::vec3(4,4,4);
+		glUniform3f(LightID,lightPos.x,lightPos.y,lightPos.z);
 		
 		//Array 0: Vertices
 		glEnableVertexAttribArray(0);
 		glBindBuffer(GL_ARRAY_BUFFER,vertexbuffer);
 		glVertexAttribPointer(
-			0,			//attribute 0
+			0,			//attribute
 			3,			//size
 			GL_FLOAT,	//type
 			GL_FALSE,	//normalized
@@ -140,20 +149,19 @@ int main(){
 		//Array 1: UVs
 		glEnableVertexAttribArray(1);
 		glBindBuffer(GL_ARRAY_BUFFER,uvbuffer);
-		glVertexAttribPointer(
-			1,
-			2,
-			GL_FLOAT,
-			GL_FALSE,
-			0,
-			(void *)0
-		);
+		glVertexAttribPointer(1,2,GL_FLOAT,GL_FALSE,0,(void *)0);
 		
-		glDrawArrays(GL_TRIANGLES,0,12*3);
+		//Array 2: normals
+		glEnableVertexAttribArray(2);
+		glBindBuffer(GL_ARRAY_BUFFER,normalbuffer);
+		glVertexAttribPointer(2,3,GL_FLOAT,GL_FALSE,0,(void*)0);
+		
+		glDrawArrays(GL_TRIANGLES,0,vertices.size());
 		
 		//Disable Arrays
 		glDisableVertexAttribArray(0);
 		glDisableVertexAttribArray(1);
+		glDisableVertexAttribArray(2);
 		
 		glfwSwapBuffers(window);
 		glfwPollEvents();
@@ -162,6 +170,7 @@ int main(){
 	//Cleanup
 	glDeleteBuffers(1,&vertexbuffer);
 	glDeleteBuffers(1,&uvbuffer);
+	glDeleteBuffers(1,&normalbuffer);
 	glDeleteProgram(programID);
 	glDeleteTextures(1,&Texture);
 	glDeleteVertexArrays(1,&VertexArrayID);
@@ -483,47 +492,3 @@ bool loadOBJ(
 	fclose(file);
 	return true;
 }
-
-/*bool loadAssImp(
-	const char *path,
-	std::vector<unsigned short>&indices,
-	std::vector<glm::vec3>&vertices,
-	std::vector<glm::vec2>&uvs,
-	std::vector<glm::vec3>&normals
-){
-	Assimp::Importer importer;
-	
-	const aiScene* scene=importer.ReadFile(path,0);
-	if(!scene){
-		fprintf(stderr,importer.GetErrorString());
-		return false;
-	}
-	const aiMesh* mesh=scene->mMeshes[0];
-	
-	vertices.reserve(mesh->mNumVertices);
-	for(unsigned int i=0;i<mesh->mNumVertices;i++){
-		aiVector3D pos=mesh->mVertices[i];
-		vertices.push_back(glm::vec3(pos.x,pos.y,pos.z));
-	}
-	
-	uvs.reserve(mesh->mNumVertices);
-	for(unsigned int i=0;i<mesh->mNumVertices;i++){
-		aiVector3D UVW=mesh->mTextureCoords[0][i];
-		uvs.push_back(glm::vec2(UVW.x,UVW.y));
-	}
-	
-	normals.reserve(mesh->mNumVertices);
-	for(unsigned int i=0;i<mesh->mNumVertices;i++){
-		aiVector3D n=mesh->mNormals[i];
-		normals.push_back(glm::vec3(n.x,n.y,n.z));
-	}
-	
-	indices.reserve(3*mesh->mNumFaces);
-	for(unsigned int i=0;i<mesh->mNumFaces;i++){
-		indices.push_back(mesh->mFaces[i].mIndices[0]);
-		indices.push_back(mesh->mFaces[i].mIndices[1]);
-		indices.push_back(mesh->mFaces[i].mIndices[2]);
-	}
-	
-	return true;
-}*/
