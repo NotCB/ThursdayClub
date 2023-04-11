@@ -53,6 +53,16 @@ void indexVBO(
 	std::vector<glm::vec3>&out_normals
 );
 
+void initText2D(const char * texturePath);
+void printText2D(const char * text,int x,int y,int size);
+void cleanupText2D();
+
+unsigned int Text2DTextureID;
+unsigned int Text2DVertexBufferID;
+unsigned int Text2DUVBufferID;
+unsigned int Text2DShaderID;
+unsigned int Text2DUniformID;
+
 glm::vec3 position=glm::vec3(0,0,2);
 float horizontalAngle=180.0f/180.0f*3.14f;
 float verticalAngle=0.0f/180.0f*3.14f;
@@ -74,7 +84,7 @@ int main(){
 	glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT,GL_TRUE);//MacOS Happy
 	glfwWindowHint(GLFW_OPENGL_PROFILE,GLFW_OPENGL_CORE_PROFILE);
 	
-	window=glfwCreateWindow(640,480,"Tutorial",NULL,NULL);
+	window=glfwCreateWindow(1920,1080,"Tutorial",NULL,NULL);
 	if(window==NULL){
 		std::fstream eout("error.log",std::ios::out | std::ios::app);
 		eout<<"Failed to open GLFW window.";
@@ -147,6 +157,8 @@ int main(){
 	glUseProgram(programID);
 	GLuint LightID=glGetUniformLocation(programID,"LightPosition_worldspace");
 	
+	initText2D("Holstein.DDS");
+	
 	glEnable(GL_DEPTH_TEST);
 	glDepthFunc(GL_LESS);
 	//glEnable(GL_CULL_FACE);
@@ -182,6 +194,10 @@ int main(){
 		glm::vec3 lightPos=glm::vec3(4,4,4);
 		glUniform3f(LightID,lightPos.x,lightPos.y,lightPos.z);
 		
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D,Texture);
+		glUniform1i(textureID,0);
+		
 		//Array 0: Vertices
 		glEnableVertexAttribArray(0);
 		glBindBuffer(GL_ARRAY_BUFFER,vertexbuffer);
@@ -213,6 +229,10 @@ int main(){
 		glDisableVertexAttribArray(1);
 		glDisableVertexAttribArray(2);
 		
+		char text[256];
+		sprintf(text,"%.2f sec",glfwGetTime());
+		printText2D(text,10,500,60);
+		
 		glfwSwapBuffers(window);
 		glfwPollEvents();
 	}while(glfwGetKey(window,GLFW_KEY_ESCAPE)!=GLFW_PRESS&&glfwWindowShouldClose(window)==0);
@@ -224,6 +244,8 @@ int main(){
 	glDeleteProgram(programID);
 	glDeleteTextures(1,&Texture);
 	glDeleteVertexArrays(1,&VertexArrayID);
+	
+	cleanupText2D();
 	
 	glfwTerminate();
 	
@@ -591,4 +613,85 @@ void indexVBO(
 			VertexToOutIndex[packed]=newindex;
 		}
 	}
+}
+
+void initText2D(const char * texturePath){
+	Text2DTextureID=loadDDS(texturePath);
+	glGenBuffers(1,&Text2DVertexBufferID);
+	glGenBuffers(1,&Text2DUVBufferID);
+	Text2DShaderID=LoadShaders("textvertex.glsl","textfragment.glsl");
+	Text2DUniformID=glGetUniformLocation(Text2DShaderID,"myTextureSampler");
+}
+
+void printText2D(const char * text,int x,int y,int size){
+	unsigned int length=strlen(text);
+	
+	std::vector<glm::vec2>vertices;
+	std::vector<glm::vec2>UVs;
+	for(unsigned int i=0;i<length;i++){
+		glm::vec2 vertex_up_left=glm::vec2(x+i*size,y+size);
+		glm::vec2 vertex_up_right=glm::vec2(x+i*size+size,y+size);
+		glm::vec2 vertex_down_right=glm::vec2(x+i*size+size,y);
+		glm::vec2 vertex_down_left=glm::vec2(x+i*size,y);
+		
+		vertices.push_back(vertex_up_left);
+		vertices.push_back(vertex_down_left);
+		vertices.push_back(vertex_up_right);
+		
+		vertices.push_back(vertex_down_right);
+		vertices.push_back(vertex_up_right);
+		vertices.push_back(vertex_down_left);
+		
+		char character=text[i];
+		float uv_x=(character%16)/16.0f;
+		float uv_y=(character/16)/16.0f;
+		
+		glm::vec2 uv_up_left=glm::vec2(uv_x,uv_y);
+		glm::vec2 uv_up_right=glm::vec2(uv_x+1.0f/16.0f,uv_y);
+		glm::vec2 uv_down_right=glm::vec2(uv_x+1.0f/16.0f,uv_y+1.0f/16.0f);
+		glm::vec2 uv_down_left=glm::vec2(uv_x,uv_y+1.0f/16.0f);
+		
+		UVs.push_back(uv_up_left);
+		UVs.push_back(uv_down_left);
+		UVs.push_back(uv_up_right);
+		
+		UVs.push_back(uv_down_right);
+		UVs.push_back(uv_up_right);
+		UVs.push_back(uv_down_left);
+	}
+	
+	glBindBuffer(GL_ARRAY_BUFFER,Text2DVertexBufferID);
+	glBufferData(GL_ARRAY_BUFFER,vertices.size()*sizeof(glm::vec2),&vertices[0],GL_STATIC_DRAW);
+	glBindBuffer(GL_ARRAY_BUFFER,Text2DUVBufferID);
+	glBufferData(GL_ARRAY_BUFFER,UVs.size()*sizeof(glm::vec2),&UVs[0],GL_STATIC_DRAW);
+	
+	glUseProgram(Text2DShaderID);
+	
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D,Text2DTextureID);
+	glUniform1i(Text2DUniformID,0);
+	
+	glEnableVertexAttribArray(0);
+	glBindBuffer(GL_ARRAY_BUFFER,Text2DVertexBufferID);
+	glVertexAttribPointer(0,2,GL_FLOAT,GL_FALSE,0,(void*)0);
+	
+	glEnableVertexAttribArray(1);
+	glBindBuffer(GL_ARRAY_BUFFER,Text2DUVBufferID);
+	glVertexAttribPointer(1,2,GL_FLOAT,GL_FALSE,0,(void*)0);
+	
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
+	
+	glDrawArrays(GL_TRIANGLES,0,vertices.size());
+	
+	glDisable(GL_BLEND);
+	glDisableVertexAttribArray(0);
+	glDisableVertexAttribArray(1);
+}
+
+void cleanupText2D(){
+	glDeleteBuffers(1,&Text2DVertexBufferID);
+	glDeleteBuffers(1,&Text2DUVBufferID);
+	glDeleteTextures(1,&Text2DTextureID);
+	glDeleteProgram(Text2DShaderID);
 }
