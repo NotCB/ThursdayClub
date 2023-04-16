@@ -16,8 +16,12 @@
 void framebuffer_size_callback(GLFWwindow* window,int width, int height);
 void processInput(GLFWwindow *window);
 
-unsigned int windowWidth=640;
-unsigned int windowHeight=480;
+unsigned int loadTextureRGB(const char file[]);
+unsigned int loadTextureRGBA(const char file[]);
+
+unsigned int windowWidth=1920;
+unsigned int windowHeight=1080;
+char windowName[]="Window Name";
 
 int main(){
 	glfwInit();
@@ -25,8 +29,7 @@ int main(){
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR,3);
 	glfwWindowHint(GLFW_OPENGL_PROFILE,GLFW_OPENGL_CORE_PROFILE);
 	glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT,GL_TRUE);
-	
-	GLFWwindow* window=glfwCreateWindow(windowWidth,windowHeight,"",NULL,NULL);
+	GLFWwindow* window=glfwCreateWindow(windowWidth,windowHeight,windowName,NULL,NULL);
 	if(window==NULL){
 		eout<<"Failed to create GLFW window.\n";
 		glfwTerminate();
@@ -34,7 +37,6 @@ int main(){
 	}
 	glfwMakeContextCurrent(window);
 	glfwSetFramebufferSizeCallback(window,framebuffer_size_callback);
-	
 	if(!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)){
 		eout<<"Failed to initialize GLAD.\n";
 		return -1;
@@ -48,7 +50,6 @@ int main(){
 		-0.5f,-0.5f,0.0f,0.0f,0.0f,
 		0.5f,-0.5f,0.0f,1.0f,0.0f
 	};
-	
 	unsigned int indices[]={
 		0,1,2,
 		1,2,3
@@ -73,39 +74,10 @@ int main(){
 	glVertexAttribPointer(1,2,GL_FLOAT,GL_FALSE,5*sizeof(float),(void*)(3*sizeof(float)));
 	glEnableVertexAttribArray(1);
 	
-	unsigned int texture1,texture2;
-	int width,height,nrChannels;
 	stbi_set_flip_vertically_on_load(true);
 	
-	glGenTextures(1,&texture1);
-	glBindTexture(GL_TEXTURE_2D,texture1);
-	glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S,GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T,GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
-	unsigned char *data=stbi_load(FileSystem::getPath("textures/container.jpg").c_str(),&width,&height,&nrChannels,0);
-	if(data){
-		glTexImage2D(GL_TEXTURE_2D,0,GL_RGB,width,height,0,GL_RGB,GL_UNSIGNED_BYTE,data);
-		glGenerateMipmap(GL_TEXTURE_2D);
-	}else{
-		eout<<"Failed to load texture.\n";
-	}
-	stbi_image_free(data);
-	
-	glGenTextures(1,&texture2);
-	glBindTexture(GL_TEXTURE_2D,texture2);
-	glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S,GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T,GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
-	data=stbi_load(FileSystem::getPath("textures/awesomeface.png").c_str(),&width,&height,&nrChannels,0);
-	if(data){
-		glTexImage2D(GL_TEXTURE_2D,0,GL_RGBA,width,height,0,GL_RGBA,GL_UNSIGNED_BYTE,data);
-		glGenerateMipmap(GL_TEXTURE_2D);
-	}else{
-		eout<<"Failed to load texture.\n";
-	}
-	stbi_image_free(data);
+	unsigned int texture1=loadTextureRGB("textures/container.jpg");
+	unsigned int texture2=loadTextureRGBA("textures/awesomeface.png");
 	
 	ourShader.use();
 	ourShader.setInt("texture1",0);
@@ -124,13 +96,13 @@ int main(){
 		glActiveTexture(GL_TEXTURE1);
 		glBindTexture(GL_TEXTURE_2D,texture2);
 		
-		glm::mat4 trans=glm::mat4(1.0f);
-		trans=glm::translate(trans,glm::vec3(0.5f,-0.5f,0.0f));
-		trans=glm::rotate(trans,(float)glfwGetTime(),glm::vec3(0.0f,0.0f,1.0f));
+		glm::mat4 transform=glm::mat4(1.0f);
+		transform=glm::translate(transform,glm::vec3(0.5f,-0.5f,0.0f));
+		transform=glm::rotate(transform,(float)glfwGetTime(),glm::vec3(0.0f,0.0f,1.0f));
 		
 		ourShader.use();
 		unsigned int transformLoc=glGetUniformLocation(ourShader.ID,"transform");
-		glUniformMatrix4fv(transformLoc,1,GL_FALSE,glm::value_ptr(trans));
+		glUniformMatrix4fv(transformLoc,1,GL_FALSE,glm::value_ptr(transform));
 		
 		glBindVertexArray(VAO);
 		glDrawElements(GL_TRIANGLES,6,GL_UNSIGNED_INT,0);
@@ -155,5 +127,45 @@ void processInput(GLFWwindow *window){
 
 void framebuffer_size_callback(GLFWwindow* window,int width,int height){
 	glViewport(0,0,width,height);
+}
+
+unsigned int loadTextureRGB(const char file[]){
+	unsigned int texture;
+	int width,height,nrChannels;
+	glGenTextures(1,&texture);
+	glBindTexture(GL_TEXTURE_2D,texture);
+	glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S,GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T,GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
+	unsigned char *data=stbi_load(FileSystem::getPath(file).c_str(),&width,&height,&nrChannels,0);
+	if(data){
+		glTexImage2D(GL_TEXTURE_2D,0,GL_RGB,width,height,0,GL_RGB,GL_UNSIGNED_BYTE,data);
+		glGenerateMipmap(GL_TEXTURE_2D);
+	}else{
+		eout<<"Failed to load texture.\n";
+	}
+	stbi_image_free(data);
+	return texture;
+}
+
+unsigned int loadTextureRGBA(const char file[]){
+	unsigned int texture;
+	int width,height,nrChannels;
+	glGenTextures(1,&texture);
+	glBindTexture(GL_TEXTURE_2D,texture);
+	glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S,GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T,GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
+	unsigned char *data=stbi_load(FileSystem::getPath(file).c_str(),&width,&height,&nrChannels,0);
+	if(data){
+		glTexImage2D(GL_TEXTURE_2D,0,GL_RGBA,width,height,0,GL_RGBA,GL_UNSIGNED_BYTE,data);
+		glGenerateMipmap(GL_TEXTURE_2D);
+	}else{
+		eout<<"Failed to load texture.\n";
+	}
+	stbi_image_free(data);
+	return texture;
 }
 
