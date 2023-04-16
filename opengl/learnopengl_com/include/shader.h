@@ -5,12 +5,8 @@
 #include <iostream>
 #include <sstream>
 #include <string>
-
 #include <glad/glad.h>
-
-#ifndef EOUT_H
 #include "eout.h"
-#endif
 
 class Shader{
 public:
@@ -85,6 +81,4 @@ private:
 		}
 	}
 };
-
 #endif
-
