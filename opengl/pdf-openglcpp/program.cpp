@@ -1,4 +1,4 @@
-// 92 / 535
+// 126 / 535
 
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
@@ -53,6 +53,14 @@ public:
 	//GLuint createShaderProgram(const char *vp,const char *gp,const char *fp){}
 	//GLuint createShaderProgram(const char *vp,const char *tCS,const char *tES,const char *fp){}
 	//GLuint createShaderProgram(const char *vp,const char *tCS,const char *tES,const char *gp,const char *fp){}
+	
+	/*GLuint loadTexture(const char *texImagePath){
+		GLuint textureID;
+		textureID=SOIL_load_OGL_texture(texImagePath,
+		SOIL_LOAD_AUTO,SOIL_CREATE_NEW_ID,SOIL_FLAG_INVERT_Y);
+		if(textureID=0){eout<<"Could not find texture file "<<texImagePath<<'\n';}
+		return textureID;
+	}*/
 	
 private:
 	std::string readShaderSource(const char* filePath){
@@ -115,22 +123,26 @@ GLuint vao[numVAOs];
 GLuint vbo[numVBOs];
 
 GLuint mvLoc,projLoc;
-int width,height;
 float aspect;
 glm::mat4 pMat,vMat,mMat,mvMat,tMat,rMat;
 
 void init(GLFWwindow* window);
 void display(GLFWwindow* window,double currentTime);
 void setupVertices();
+void window_reshape_callback(GLFWwindow* window,int newWidth,int newHeight);
+
+int width=640;
+int height=480;
 
 int main(void){
 	if(!glfwInit()){exit(EXIT_FAILURE);}
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR,4);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR,3);
-	GLFWwindow* window=glfwCreateWindow(640,480,"",NULL,NULL);
+	GLFWwindow* window=glfwCreateWindow(width,height,"",NULL,NULL);
 	glfwMakeContextCurrent(window);
 	if(glewInit()!=GLEW_OK){exit(EXIT_FAILURE);}
 	glfwSwapInterval(1);
+	glfwSetWindowSizeCallback(window,window_reshape_callback);
 	
 	init(window);
 	
@@ -150,6 +162,9 @@ void init(GLFWwindow* window){
 	cameraX=0.0f;cameraY=0.0f;cameraZ=8.0f;
 	cubeLocX=0.0f;cubeLocY=-2.0f;cubeLocZ=0.0f;
 	setupVertices();
+	glfwGetFramebufferSize(window,&width,&height);
+	aspect=(float)width/(float)height;
+	pMat=glm::perspective(1.0472f,aspect,0.1f,1000.0f);
 }
 
 void display(GLFWwindow* window,double currentTime){
@@ -159,10 +174,6 @@ void display(GLFWwindow* window,double currentTime){
 	
 	mvLoc=glGetUniformLocation(renderingProgram,"mv_matrix");
 	projLoc=glGetUniformLocation(renderingProgram,"proj_matrix");
-	
-	glfwGetFramebufferSize(window,&width,&height);
-	aspect=(float)width/(float)height;
-	pMat=glm::perspective(1.0472f,aspect,0.1f,1000.0f);//1.0472 radians = 60 degrees
 	
 	vMat=glm::translate(glm::mat4(1.0f),glm::vec3(-cameraX,-cameraY,-cameraZ));
 	mMat=glm::translate(glm::mat4(1.0f),glm::vec3(cubeLocX,cubeLocY,cubeLocZ));
@@ -184,6 +195,8 @@ void display(GLFWwindow* window,double currentTime){
 	
 	glEnable(GL_DEPTH_TEST);
 	glDepthFunc(GL_LEQUAL);
+	glEnable(GL_CULL_FACE);
+	glFrontFace(GL_CW);
 	glDrawArrays(GL_TRIANGLES,0,36);
 }
 
@@ -208,4 +221,10 @@ void setupVertices(){
 	glGenBuffers(numVBOs,vbo);
 	glBindBuffer(GL_ARRAY_BUFFER,vbo[0]);
 	glBufferData(GL_ARRAY_BUFFER,sizeof(vertexPositions),vertexPositions,GL_STATIC_DRAW);
+}
+
+void window_reshape_callback(GLFWwindow* window,int newWidth,int newHeight){
+	aspect=(float)newWidth /(float)newHeight;
+	glViewport(0,0,newWidth,newHeight);
+	pMat=glm::perspective(1.0472f,aspect,0.1f,1000.0f);
 }
