@@ -1,12 +1,13 @@
+bits 64
+default rel
+
+segment .data
+	msg db "Hello World!",0xd,0xa,0
+
+segment .text
 global main
-extern puts
-section .text
+extern printf
 
 main:
-	sub rsp,28h
-	mov rcx,message
-	call puts
-	add rsp,28h
-	ret
-message:
-	db	'Hello World',0	;C strings require a zero byte at the end
+	lea rcx,[msg]
+	call printf
